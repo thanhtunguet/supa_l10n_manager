@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:async';
 import 'package:flutter/services.dart' show rootBundle;
+import 'package:logging/logging.dart';
 
 class Localization {
   static final Map<String, Map<String, dynamic>> _cache = {};
@@ -13,6 +14,13 @@ class Localization {
   /// Loads translations asynchronously for the given [locale].
   /// Optionally provide a [fallbackLocale].
   static Future<void> load(String locale, {String? fallbackLocale}) async {
+    Logger.root.level = Level.ALL; // defaults to Level.INFO
+    Logger.root.onRecord.listen((record) {
+      ///
+    });
+
+    final log = Logger('SupaLocalizationManager');
+
     _currentLocale = locale;
     _fallbackLocale = fallbackLocale;
     if (_cache.containsKey(locale)) {
@@ -27,7 +35,7 @@ class Localization {
       _translations = _convertFlatMapToNested(flatMap);
       _cache[locale] = _translations;
     } catch (e) {
-      print('Error loading localization for locale $locale: $e');
+      log.fine('Error loading localization for locale $locale: $e');
       _translations = {};
       _cache[locale] = _translations;
     }
@@ -39,7 +47,10 @@ class Localization {
     final Map<String, dynamic> nestedMap = {};
 
     for (var entry in flatMap.entries) {
-      final List<String> keys = entry.key.split('.');
+      final List<String> keys = entry.key.split('.')
+        ..sort(
+          (a, b) => a.compareTo(b),
+        );
       dynamic current = nestedMap;
 
       for (int i = 0; i < keys.length; i++) {

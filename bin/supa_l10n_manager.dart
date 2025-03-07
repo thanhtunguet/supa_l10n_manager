@@ -1,8 +1,16 @@
 import 'dart:io';
 import 'dart:convert';
 import 'package:args/args.dart';
+import 'package:logging/logging.dart';
+
+final log = Logger('SupaLocalizationManager');
 
 Future<void> main(List<String> arguments) async {
+  Logger.root.level = Level.ALL; // defaults to Level.INFO
+  Logger.root.onRecord.listen((record) {
+    /// Print log messages to the console.
+  });
+
   final parser = ArgParser();
 
   // Register commands.
@@ -16,15 +24,15 @@ Future<void> main(List<String> arguments) async {
       help: 'Source directory to scan for Dart files');
 
   if (arguments.isEmpty) {
-    print('Usage: my_localization_cli <command> [options]');
-    print('Commands: merge, extract');
+    log.info('Usage: my_localization_cli <command> [options]');
+    log.info('Commands: merge, extract');
     exit(1);
   }
 
   final argResults = parser.parse(arguments);
   final command = argResults.command;
   if (command == null) {
-    print('No command provided.');
+    log.warning('No command provided.');
     exit(1);
   }
 
@@ -38,7 +46,7 @@ Future<void> main(List<String> arguments) async {
       await extractMissingKeys(locale, sourceDir);
       break;
     default:
-      print('Unknown command: ${command.name}');
+      log.warning('Unknown command: ${command.name}');
       exit(1);
   }
 }
@@ -48,7 +56,7 @@ Future<void> main(List<String> arguments) async {
 Future<void> mergeTranslations() async {
   final assetsDir = Directory('assets/i18n');
   if (!assetsDir.existsSync()) {
-    print('Directory assets/i18n not found.');
+    log.warning('Directory assets/i18n not found.');
     exit(1);
   }
   final List<Directory> localeDirs =
@@ -76,25 +84,26 @@ Future<void> mergeTranslations() async {
           mergedMap[fullKey] = value;
         });
       } catch (e) {
-        print('Error reading ${file.path}: $e');
+        log.severe('Error reading ${file.path}: $e');
       }
     }
     final mergedFile = File('assets/i18n/$locale.json');
     mergedFile
         .writeAsStringSync(JsonEncoder.withIndent('  ').convert(mergedMap));
-    print('Merged translations for locale "$locale" into ${mergedFile.path}');
+    log.info(
+        'Merged translations for locale "$locale" into ${mergedFile.path}');
   }
 }
 
 /// Scans Dart source files for `translate('...')` usages and updates
-/// individual namespace JSON files under assets/i18n/<locale>/.
+/// individual namespace JSON files under assets/i18n/{locale}/.
 /// If a namespace file doesn't exist, it will be created. Any missing key is
 /// added with an empty string value.
 Future<void> extractMissingKeys(String locale, String sourceDir) async {
   // Recursively search for Dart files.
   final dir = Directory(sourceDir);
   if (!dir.existsSync()) {
-    print('Source directory "$sourceDir" not found.');
+    log.severe('Source directory "$sourceDir" not found.');
     exit(1);
   }
 
@@ -119,7 +128,7 @@ Future<void> extractMissingKeys(String locale, String sourceDir) async {
   for (final fullKey in keysFound) {
     final parts = fullKey.split('.');
     if (parts.length < 2) {
-      print('Skipping key without namespace: $fullKey');
+      log.info('Skipping key without namespace: $fullKey');
       continue;
     }
     final namespace = parts.first;
@@ -132,14 +141,15 @@ Future<void> extractMissingKeys(String locale, String sourceDir) async {
   // Ensure the locale directory exists: assets/i18n/<locale>/
   final localeDir = Directory('assets/i18n/$locale');
   if (!localeDir.existsSync()) {
-    print('Locale directory "assets/i18n/$locale" does not exist. Creating...');
+    log.severe(
+        'Locale directory "assets/i18n/$locale" does not exist. Creating...');
     localeDir.createSync(recursive: true);
   }
 
   // Process each namespace group.
   for (final entry in keysByNamespace.entries) {
     final namespace = entry.key;
-    final keys = entry.value;
+    final keys = entry.value.toList()..sort((a, b) => a.compareTo(b));
 
     final filePath = 'assets/i18n/$locale/$namespace.json';
     final jsonFile = File(filePath);
@@ -152,11 +162,11 @@ Future<void> extractMissingKeys(String locale, String sourceDir) async {
           jsonMap = json.decode(content);
         }
       } catch (e) {
-        print('Error reading $filePath: $e');
+        log.severe('Error reading $filePath: $e');
         continue;
       }
     } else {
-      print('File $filePath does not exist. Creating...');
+      log.severe('File $filePath does not exist. Creating...');
     }
 
     bool updated = false;
@@ -165,15 +175,15 @@ Future<void> extractMissingKeys(String locale, String sourceDir) async {
       if (!jsonMap.containsKey(key)) {
         jsonMap[key] = "";
         updated = true;
-        print('Added missing key "$namespace.$key" with empty value.');
+        log.fine('Added missing key "$namespace.$key" with empty value.');
       }
     }
 
     if (updated) {
       jsonFile.writeAsStringSync(JsonEncoder.withIndent('  ').convert(jsonMap));
-      print('Updated file: $filePath');
+      log.fine('Updated file: $filePath');
     } else {
-      print('No missing keys in $filePath.');
+      log.info('No missing keys in $filePath.');
     }
   }
 }
