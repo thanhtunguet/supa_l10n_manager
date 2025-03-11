@@ -1,3 +1,7 @@
+## 1.0.2
+
+* Use flat map
+
 ## 1.0.1
 
 * Sort the generated keys

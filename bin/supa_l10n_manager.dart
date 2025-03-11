@@ -16,12 +16,18 @@ Future<void> main(List<String> arguments) async {
   // Register commands.
   parser.addCommand('merge');
   final extractCommand = parser.addCommand('extract');
-  extractCommand.addOption('locale',
-      abbr: 'l', defaultsTo: 'en', help: 'Locale to check');
-  extractCommand.addOption('source',
-      abbr: 's',
-      defaultsTo: 'lib',
-      help: 'Source directory to scan for Dart files');
+  extractCommand.addOption(
+    'locale',
+    abbr: 'l',
+    defaultsTo: 'en',
+    help: 'Locale to check',
+  );
+  extractCommand.addOption(
+    'source',
+    abbr: 's',
+    defaultsTo: 'lib',
+    help: 'Source directory to scan for Dart files',
+  );
 
   if (arguments.isEmpty) {
     log.info('Usage: my_localization_cli <command> [options]');
@@ -109,7 +115,8 @@ Future<void> extractMissingKeys(String locale, String sourceDir) async {
 
   final Set<String> keysFound = {};
   // Regex pattern to capture translate('key') usages.
-  final regex = RegExp(r"translate\s*\(\s*'([A-Za-z0-9$\{\}\.]+)'\)");
+  final regex = RegExp(
+      r"translate\s*\(\s*'([A-Za-z0-9$\{\}\.]+)'\s*(?:,\s*\{[^}]*\})?\s*\)");
 
   await for (var entity in dir.list(recursive: true, followLinks: false)) {
     if (entity is File && entity.path.endsWith('.dart')) {
