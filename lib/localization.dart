@@ -40,7 +40,6 @@ class Localization {
       _translations = {};
       _cache[locale] = _translations;
     }
-    print(_translations);
   }
 
   /// Returns the translation for the given [key].
