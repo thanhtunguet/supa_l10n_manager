@@ -1,3 +1,7 @@
+## 1.0.3
+
+* Widen the sdk support range
+
 ## 1.0.2
 
 * Use flat map
