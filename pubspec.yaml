@@ -4,7 +4,7 @@ version: 1.1.0
 homepage: https://github.com/thanhtunguet/supa_l10n_manager
 
 environment:
-  sdk: ^3.6.1
+  sdk: ^3.0.0
   flutter: ">=1.17.0"
 
 dependencies:
