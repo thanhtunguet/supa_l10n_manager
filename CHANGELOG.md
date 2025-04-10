@@ -1,3 +1,7 @@
+## 1.1.0
+
+* Added function to reorder translation keys
+
 ## 1.0.2
 
 * Use flat map

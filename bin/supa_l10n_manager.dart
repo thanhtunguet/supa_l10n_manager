@@ -15,6 +15,7 @@ Future<void> main(List<String> arguments) async {
 
   // Register commands.
   parser.addCommand('merge');
+  parser.addCommand('reorder'); // Add new reorder command
   final extractCommand = parser.addCommand('extract');
   extractCommand.addOption(
     'locale',
@@ -31,7 +32,7 @@ Future<void> main(List<String> arguments) async {
 
   if (arguments.isEmpty) {
     log.info('Usage: my_localization_cli <command> [options]');
-    log.info('Commands: merge, extract');
+    log.info('Commands: merge, extract, reorder');
     exit(1);
   }
 
@@ -50,6 +51,9 @@ Future<void> main(List<String> arguments) async {
       final locale = command['locale'];
       final sourceDir = command['source'];
       await extractMissingKeys(locale, sourceDir);
+      break;
+    case 'reorder':
+      await reorderTranslationKeys();
       break;
     default:
       log.warning('Unknown command: ${command.name}');
@@ -192,5 +196,71 @@ Future<void> extractMissingKeys(String locale, String sourceDir) async {
     } else {
       log.info('No missing keys in $filePath.');
     }
+  }
+}
+
+// ...existing code...
+
+/// Scans all JSON files in assets/i18n directory and reorders their keys alphabetically.
+/// This works with both flattened locale JSON files (like en.json) and individual
+/// namespace files in locale subdirectories.
+Future<void> reorderTranslationKeys() async {
+  final assetsDir = Directory('assets/i18n');
+  if (!assetsDir.existsSync()) {
+    log.warning('Directory assets/i18n not found.');
+    exit(1);
+  }
+
+  int processedFiles = 0;
+
+  // Process all JSON files directly in assets/i18n (merged locale files)
+  final rootFiles = assetsDir
+      .listSync()
+      .whereType<File>()
+      .where((file) => file.path.endsWith('.json'));
+
+  for (var file in rootFiles) {
+    await _reorderKeysInFile(file);
+    processedFiles++;
+  }
+
+  // Process all JSON files in locale subdirectories
+  final localeDirs = assetsDir.listSync().whereType<Directory>().toList();
+
+  for (var localeDir in localeDirs) {
+    final jsonFiles = localeDir
+        .listSync()
+        .whereType<File>()
+        .where((file) => file.path.endsWith('.json'));
+
+    for (var file in jsonFiles) {
+      await _reorderKeysInFile(file);
+      processedFiles++;
+    }
+  }
+
+  log.info('Successfully reordered keys in $processedFiles JSON files.');
+}
+
+/// Reorders keys alphabetically in a JSON file and writes the sorted content back.
+Future<void> _reorderKeysInFile(File file) async {
+  try {
+    final content = await file.readAsString();
+    if (content.trim().isEmpty) {
+      log.warning('Empty file: ${file.path}');
+      return;
+    }
+
+    final Map<String, dynamic> jsonMap = json.decode(content);
+
+    // Create a new map with sorted keys
+    final sortedMap = Map.fromEntries(
+        jsonMap.entries.toList()..sort((a, b) => a.key.compareTo(b.key)));
+
+    // Write sorted map back to file
+    await file.writeAsString(JsonEncoder.withIndent('  ').convert(sortedMap));
+    log.fine('Reordered keys in: ${file.path}');
+  } catch (e) {
+    log.severe('Error processing ${file.path}: $e');
   }
 }

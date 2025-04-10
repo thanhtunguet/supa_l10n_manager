@@ -6,7 +6,7 @@ A Flutter localization package with a CLI tool to manage and load translations e
 
 ✅ **Namespace-Based Key Organization** - Keeps translation files modular  
 ✅ **Automatic Translation Key Extraction** - Finds missing keys in your Dart code  
-✅ **CLI Tool for JSON Merging & Key Extraction** - Simplifies localization management  
+✅ **CLI Tool for JSON Merging, Key Extraction & Reordering** - Simplifies localization management  
 ✅ **Async & Cached Translation Loading** - Ensures performance  
 ✅ **Fallback Locale Support** - Prevents missing translation issues  
 
@@ -143,13 +143,13 @@ class MyApp extends StatelessWidget {
 
 ## CLI Tool
 
-The package provides a CLI tool to **merge JSON files** and **extract missing keys**.
+The package provides a CLI tool to **merge JSON files**, **extract missing keys**, and **reorder translation keys**.
 
 ### **1. Merge JSON Files**
 Merges all `namespace.json` files into a single file per locale:
 
 ```bash
-dart run bin/cli.dart merge
+dart run bin/supa_l10n_manager.dart merge
 ```
 
 After merging:
@@ -166,7 +166,7 @@ assets/i18n/
 Scans Dart code for `translate('key')` usages and updates namespace files.
 
 ```bash
-dart run bin/cli.dart extract --locale en --source lib
+dart run bin/supa_l10n_manager.dart extract --locale en --source lib
 ```
 
 #### **If the following keys are found in Dart code:**
@@ -185,6 +185,39 @@ translate('user.login.password');
 
 - If `user.json` does not exist, it is **automatically created**.
 - If a key is missing, it is **added with an empty string**.
+
+---
+
+### **3. Reorder Translation Keys**
+Alphabetically sorts all keys in translation files for better organization and easier version control:
+
+```bash
+dart run bin/supa_l10n_manager.dart reorder
+```
+
+This command:
+- Works on both merged locale files (e.g., `en.json`) and individual namespace files
+- Processes all JSON files in the `assets/i18n` directory tree
+- Keeps translation files organized with consistent key ordering
+- Makes comparing and merging translations easier
+
+Before reordering:
+```json
+{
+  "login.password": "Password",
+  "profile.email": "Email",
+  "login.username": "Username"
+}
+```
+
+After reordering:
+```json
+{
+  "login.password": "Password",
+  "login.username": "Username",
+  "profile.email": "Email"
+}
+```
 
 ---
 
