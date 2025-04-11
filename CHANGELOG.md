@@ -1,3 +1,7 @@
+## 1.2.0
+
+* Add remove orphans keys feature
+
 ## 1.1.0
 
 * Added function to reorder translation keys

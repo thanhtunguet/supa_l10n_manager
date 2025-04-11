@@ -15,7 +15,7 @@ Future<void> main(List<String> arguments) async {
 
   // Register commands.
   parser.addCommand('merge');
-  parser.addCommand('reorder'); // Add new reorder command
+  parser.addCommand('reorder');
   final extractCommand = parser.addCommand('extract');
   extractCommand.addOption(
     'locale',
@@ -28,6 +28,18 @@ Future<void> main(List<String> arguments) async {
     abbr: 's',
     defaultsTo: 'lib',
     help: 'Source directory to scan for Dart files',
+  );
+  extractCommand.addFlag(
+    'remove-orphans',
+    abbr: 'r',
+    defaultsTo: false,
+    help: 'Remove keys that are not found in the code',
+  );
+  extractCommand.addFlag(
+    'reorder',
+    abbr: 'o',
+    defaultsTo: false,
+    help: 'Reorder keys alphabetically in result files',
   );
 
   if (arguments.isEmpty) {
@@ -50,7 +62,9 @@ Future<void> main(List<String> arguments) async {
     case 'extract':
       final locale = command['locale'];
       final sourceDir = command['source'];
-      await extractMissingKeys(locale, sourceDir);
+      final removeOrphans = command['remove-orphans'];
+      final reorder = command['reorder'];
+      await extractMissingKeys(locale, sourceDir, removeOrphans, reorder);
       break;
     case 'reorder':
       await reorderTranslationKeys();
@@ -108,8 +122,9 @@ Future<void> mergeTranslations() async {
 /// Scans Dart source files for `translate('...')` usages and updates
 /// individual namespace JSON files under assets/i18n/{locale}/.
 /// If a namespace file doesn't exist, it will be created. Any missing key is
-/// added with an empty string value.
-Future<void> extractMissingKeys(String locale, String sourceDir) async {
+/// added with an empty string value. Optionally removes orphan keys and reorders the result.
+Future<void> extractMissingKeys(
+    String locale, String sourceDir, bool removeOrphans, bool reorder) async {
   // Recursively search for Dart files.
   final dir = Directory(sourceDir);
   if (!dir.existsSync()) {
@@ -181,6 +196,18 @@ Future<void> extractMissingKeys(String locale, String sourceDir) async {
     }
 
     bool updated = false;
+
+    // Handle orphan keys removal if enabled
+    if (removeOrphans) {
+      final orphanKeys =
+          jsonMap.keys.where((key) => !keys.contains(key)).toList();
+      for (final orphanKey in orphanKeys) {
+        jsonMap.remove(orphanKey);
+        updated = true;
+        log.fine('Removed orphan key "$namespace.$orphanKey".');
+      }
+    }
+
     // Add each missing key with an empty value.
     for (final key in keys) {
       if (!jsonMap.containsKey(key)) {
@@ -190,16 +217,23 @@ Future<void> extractMissingKeys(String locale, String sourceDir) async {
       }
     }
 
+    // Sort keys if reordering is enabled
+    if (reorder && jsonMap.isNotEmpty) {
+      final sortedMap = Map.fromEntries(
+          jsonMap.entries.toList()..sort((a, b) => a.key.compareTo(b.key)));
+      jsonMap = sortedMap;
+      updated = true;
+      log.fine('Reordered keys in "$filePath".');
+    }
+
     if (updated) {
       jsonFile.writeAsStringSync(JsonEncoder.withIndent('  ').convert(jsonMap));
-      log.fine('Updated file: $filePath');
+      log.info('Updated file: $filePath');
     } else {
-      log.info('No missing keys in $filePath.');
+      log.info('No changes needed in $filePath.');
     }
   }
 }
-
-// ...existing code...
 
 /// Scans all JSON files in assets/i18n directory and reorders their keys alphabetically.
 /// This works with both flattened locale JSON files (like en.json) and individual
