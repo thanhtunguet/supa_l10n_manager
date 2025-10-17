@@ -105,6 +105,62 @@ print(translate('dashboard.welcome', {'name': 'John'}));
 
 ---
 
+### **3. Pluralization with a pure translate marker**
+
+Use `plural` to define plural forms without translating immediately. It returns the proper localized string at runtime based on the value.
+
+```dart
+import 'package:supa_l10n_manager/plural.dart';
+
+final result = plural((t) {
+  return PluralForm(
+    one: t('items.one'),      // e.g. "{value} item"
+    other: t('items.other'),  // e.g. "{value} items"
+    zero: t('items.zero'),    // optional, e.g. "No items"
+    value: 2,
+  );
+});
+
+// With value = 2 -> "items.other" (actual translation once keys are provided)
+```
+
+Your translations for the above keys should include the `{value}` placeholder if you want to display the number.
+
+---
+
+### **4. Time duration formatting (translateTime)**
+
+`translateTime` converts a `Duration` into a localized string. It uses a callback-based translate marker similar to `plural`, so your source contains only keys until runtime translation occurs.
+
+Supports: years, months, days, hours, minutes, seconds, and an hours+minutes combined variant.
+
+```dart
+import 'package:supa_l10n_manager/time.dart';
+
+final text = translateTime(
+  Duration(hours: 2, minutes: 5),
+  (t) => TimeKeySets(
+    years: UnitKeySet(one: t('time.year.one'), other: t('time.year.other'), zero: t('time.year.zero')),
+    months: UnitKeySet(one: t('time.month.one'), other: t('time.month.other'), zero: t('time.month.zero')),
+    days: UnitKeySet(one: t('time.day.one'), other: t('time.day.other'), zero: t('time.day.zero')),
+    hours: UnitKeySet(one: t('time.hour.one'), other: t('time.hour.other'), zero: t('time.hour.zero')),
+    minutes: UnitKeySet(one: t('time.minute.one'), other: t('time.minute.other'), zero: t('time.minute.zero')),
+    seconds: UnitKeySet(one: t('time.second.one'), other: t('time.second.other'), zero: t('time.second.zero')),
+  ),
+  combineHoursAndMinutes: true, // produces e.g. "2 hours 5 minutes"
+);
+```
+
+Behavior summary:
+- If `duration >= 365 days`: uses year keys
+- Else if `>= 30 days`: uses month keys
+- Else if `>= 1 day`: uses day keys
+- Else if `>= 1 hour`: uses hour keys; if `combineHoursAndMinutes` and minutes remainder > 0, concatenates hours and minutes
+- Else if `>= 1 minute`: uses minute keys
+- Else: uses second keys (including zero when provided)
+
+---
+
 ## Flutter Integration
 
 To integrate with Flutter’s localization system, use the provided delegate:
